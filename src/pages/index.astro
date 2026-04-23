@@ -4,7 +4,8 @@ import { formatDate } from "@/lib/format";
 import { getStaticPosts } from "@/lib/staticPosts";
 
 const posts = await getStaticPosts();
-const base = import.meta.env.BASE_URL;
+const baseRaw = import.meta.env.BASE_URL;
+const base = baseRaw.endsWith("/") ? baseRaw : `${baseRaw}/`;
 const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
   a.localeCompare(b)
 );
