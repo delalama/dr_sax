@@ -1,0 +1,18 @@
+---
+import { getStaticPosts } from "@/lib/staticPosts";
+
+export async function getStaticPaths() {
+  const posts = await getStaticPosts();
+  return posts.map((post) => ({ params: { slug: post.slug } }));
+}
+
+const { slug } = Astro.params;
+const baseRaw = import.meta.env.BASE_URL;
+const base = baseRaw.endsWith("/") ? baseRaw : `${baseRaw}/`;
+
+if (!slug) {
+  return Astro.redirect(base);
+}
+
+return Astro.redirect(`${base}saxos/${slug}/`, 301);
+---
