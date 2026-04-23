@@ -18,6 +18,7 @@ if (!post) {
   return Astro.redirect("/");
 }
 
+const base = import.meta.env.BASE_URL;
 const pageTitle = `${post.title} | Dr. Sax`;
 const paragraphs = post.description
   .split(/\r?\n\r?\n/)
@@ -27,7 +28,7 @@ const paragraphs = post.description
 
 <BaseLayout title={pageTitle} description={post.excerpt}>
   <article class="container project">
-    <a href="/" class="back">Volver a trabajos</a>
+    <a href={base} class="back">Volver a trabajos</a>
     <header>
       <p class="pill">{post.workType}</p>
       <h1>{post.title}</h1>
@@ -40,7 +41,7 @@ const paragraphs = post.description
       {post.tags.length > 0 && (
         <div class="post-tags">
           {post.tags.map((tag) => (
-            <a class="tag-link" href={`/?tag=${encodeURIComponent(tag)}`}>
+            <a class="tag-link" href={`${base}?tag=${encodeURIComponent(tag)}`}>
               {tag}
             </a>
           ))}

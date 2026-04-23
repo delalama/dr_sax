@@ -32,6 +32,13 @@ type PostMeta = {
 };
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+const BASE_URL = import.meta.env.BASE_URL ?? "/";
+
+function withBase(relativePath: string) {
+  const base = BASE_URL.endsWith("/") ? BASE_URL : `${BASE_URL}/`;
+  const clean = relativePath.replace(/^\/+/, "");
+  return `${base}${clean}`;
+}
 
 function slugify(value: string) {
   return value
@@ -176,7 +183,7 @@ async function readPostFromFolder(folderName: string): Promise<StaticPost | null
 
   const images = orderedImageFiles.map((fileName) => ({
     fileName,
-    url: `/${folderName}/${fileName}`,
+    url: withBase(`${folderName}/${fileName}`),
     caption: captions.map.get(fileName) ?? filenameToBriefDescription(fileName)
   }));
 
