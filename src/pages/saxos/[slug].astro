@@ -1,0 +1,388 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatDate } from "@/lib/format";
+import { getStaticPostBySlug, getStaticPosts } from "@/lib/staticPosts";
+
+export async function getStaticPaths() {
+  const posts = await getStaticPosts();
+  return posts.map((post) => ({ params: { slug: post.slug } }));
+}
+
+const { slug } = Astro.params;
+if (!slug) {
+  return Astro.redirect("/");
+}
+
+const post = await getStaticPostBySlug(slug);
+if (!post) {
+  return Astro.redirect("/");
+}
+
+const pageTitle = `${post.title} | Dr. Sax`;
+const paragraphs = post.description
+  .split(/\r?\n\r?\n/)
+  .map((line) => line.trim())
+  .filter(Boolean);
+---
+
+<BaseLayout title={pageTitle} description={post.excerpt}>
+  <article class="container project">
+    <a href="/" class="back">Volver a trabajos</a>
+    <header>
+      <p class="pill">{post.workType}</p>
+      <h1>{post.title}</h1>
+      <p class="summary">{post.excerpt}</p>
+      <div class="meta">
+        {post.model && <span><strong>Modelo:</strong> {post.model}</span>}
+        <span><strong>Publicado:</strong> {formatDate(post.publishedAt)}</span>
+        <span><strong>Carpeta:</strong> {post.folderName}</span>
+      </div>
+      {post.tags.length > 0 && (
+        <div class="post-tags">
+          {post.tags.map((tag) => (
+            <a class="tag-link" href={`/?tag=${encodeURIComponent(tag)}`}>
+              {tag}
+            </a>
+          ))}
+        </div>
+      )}
+    </header>
+
+    {paragraphs.length > 0 && <section class="desc">{paragraphs.map((p) => <p>{p}</p>)}</section>}
+
+    <section class="gallery">
+      {post.images.map((image, index) => (
+        <figure>
+          <div class="img-title">{image.fileName}</div>
+          <button
+            class="image-open"
+            type="button"
+            data-full-src={image.url}
+            data-full-alt={image.caption}
+            aria-label={`Ver imagen ${index + 1} en pantalla completa`}
+          >
+            <img src={image.url} alt={image.caption} loading="lazy" />
+          </button>
+          <figcaption>
+            <span class="cap-index">{String(index + 1).padStart(2, "0")}</span>
+            <span>{image.caption}</span>
+          </figcaption>
+        </figure>
+      ))}
+    </section>
+  </article>
+
+  <dialog id="lightbox" class="lightbox">
+    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Cerrar imagen">
+      Cerrar
+    </button>
+    <img id="lightbox-image" src="" alt="" />
+  </dialog>
+</BaseLayout>
+
+<script>
+  const dialog = document.querySelector("#lightbox");
+  const dialogImage = document.querySelector("#lightbox-image");
+  const closeButton = document.querySelector("#lightbox-close");
+  const openButtons = document.querySelectorAll(".image-open");
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 8;
+  const ZOOM_STEP = 0.14;
+  let zoom = 1;
+  let panX = 0;
+  let panY = 0;
+  let isDragging = false;
+  let movedDuringDrag = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let dragStartPanX = 0;
+  let dragStartPanY = 0;
+
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+  const getPanLimits = () => {
+    if (!dialogImage) return { maxX: 0, maxY: 0 };
+    const maxX = Math.max(0, (dialogImage.clientWidth * (zoom - 1)) / 2);
+    const maxY = Math.max(0, (dialogImage.clientHeight * (zoom - 1)) / 2);
+    return { maxX, maxY };
+  };
+
+  const clampPan = () => {
+    const { maxX, maxY } = getPanLimits();
+    panX = clamp(panX, -maxX, maxX);
+    panY = clamp(panY, -maxY, maxY);
+  };
+
+  const refreshTransform = () => {
+    if (!dialogImage) return;
+    dialogImage.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+  };
+
+  const refreshCursor = () => {
+    if (!dialogImage) return;
+    dialogImage.style.transition = isDragging ? "none" : "transform 0.04s linear";
+    if (zoom <= 1) {
+      dialogImage.style.cursor = "zoom-in";
+      return;
+    }
+    dialogImage.style.cursor = isDragging ? "grabbing" : "grab";
+  };
+
+  const applyZoom = (nextZoom, originX, originY) => {
+    if (!dialogImage) return;
+
+    zoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+    if (zoom === 1) {
+      panX = 0;
+      panY = 0;
+    } else if (typeof originX === "number" && typeof originY === "number") {
+      dialogImage.style.transformOrigin = `${originX}px ${originY}px`;
+    }
+    clampPan();
+    refreshTransform();
+    refreshCursor();
+  };
+
+  if (dialog && dialogImage && closeButton && openButtons.length > 0) {
+    openButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        const src = button.getAttribute("data-full-src");
+        const alt = button.getAttribute("data-full-alt") ?? "Imagen ampliada";
+        if (!src) return;
+        dialogImage.setAttribute("src", src);
+        dialogImage.setAttribute("alt", alt);
+        applyZoom(1);
+        dialog.showModal();
+      });
+    });
+
+    closeButton.addEventListener("click", () => dialog.close());
+    dialogImage.addEventListener(
+      "wheel",
+      (event) => {
+        event.preventDefault();
+        const rect = dialogImage.getBoundingClientRect();
+        const originX = event.clientX - rect.left;
+        const originY = event.clientY - rect.top;
+        const factor = event.deltaY < 0 ? 1 + ZOOM_STEP : 1 - ZOOM_STEP;
+        applyZoom(zoom * factor, originX, originY);
+      },
+      { passive: false }
+    );
+
+    dialogImage.addEventListener("click", () => {
+      if (movedDuringDrag) {
+        movedDuringDrag = false;
+        return;
+      }
+      applyZoom(zoom > 1 ? 1 : 2.2);
+    });
+
+    dialogImage.addEventListener("pointerdown", (event) => {
+      if (zoom <= 1) return;
+      isDragging = true;
+      movedDuringDrag = false;
+      dragStartX = event.clientX;
+      dragStartY = event.clientY;
+      dragStartPanX = panX;
+      dragStartPanY = panY;
+      dialogImage.setPointerCapture(event.pointerId);
+      refreshCursor();
+    });
+
+    dialogImage.addEventListener("pointermove", (event) => {
+      if (!isDragging || zoom <= 1) return;
+      const dx = event.clientX - dragStartX;
+      const dy = event.clientY - dragStartY;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        movedDuringDrag = true;
+      }
+      panX = dragStartPanX + dx;
+      panY = dragStartPanY + dy;
+      clampPan();
+      refreshTransform();
+    });
+
+    const endDrag = () => {
+      if (!isDragging) return;
+      isDragging = false;
+      refreshCursor();
+    };
+
+    dialogImage.addEventListener("pointerup", endDrag);
+    dialogImage.addEventListener("pointercancel", endDrag);
+
+    dialog.addEventListener("close", () => {
+      applyZoom(1);
+      movedDuringDrag = false;
+      isDragging = false;
+      refreshCursor();
+    });
+
+    dialog.addEventListener("click", (event) => {
+      const rect = dialog.getBoundingClientRect();
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width;
+      if (!inDialog) {
+        dialog.close();
+      }
+    });
+  }
+</script>
+
+<style>
+  .project {
+    padding: 2rem 0 4rem;
+  }
+
+  .back {
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+
+  header h1 {
+    font-size: clamp(2.4rem, 5vw, 4.2rem);
+    margin-top: 0.7rem;
+  }
+
+  .summary {
+    max-width: 70ch;
+    color: var(--ink-soft);
+    font-size: 1.08rem;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem 1.2rem;
+    margin: 1rem 0 1.5rem;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .desc {
+    max-width: 75ch;
+    color: var(--ink-soft);
+  }
+
+  .post-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+  }
+
+  .tag-link {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.22rem 0.65rem;
+    font-size: 0.82rem;
+    color: var(--ink-soft);
+    background: color-mix(in srgb, var(--card), white 12%);
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 0.8rem;
+    margin-top: 1.2rem;
+  }
+
+  figure {
+    grid-column: span 6;
+    margin: 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--card);
+  }
+
+  .img-title {
+    font-family: monospace;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--card), white 20%);
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  figure img {
+    width: 100%;
+    display: block;
+  }
+
+  .image-open {
+    display: block;
+    width: 100%;
+    border: 0;
+    padding: 0;
+    cursor: zoom-in;
+    background: transparent;
+  }
+
+  figcaption {
+    display: flex;
+    gap: 0.6rem;
+    align-items: baseline;
+    padding: 0.65rem 0.8rem;
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    border-top: 1px solid var(--line);
+    background: color-mix(in srgb, var(--card), white 15%);
+  }
+
+  .cap-index {
+    font-weight: 700;
+    color: var(--accent-dark);
+    min-width: 1.8rem;
+  }
+
+  .lightbox {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    max-width: min(96vw, 1400px);
+  }
+
+  .lightbox::backdrop {
+    background: rgba(0, 0, 0, 0.85);
+  }
+
+  .lightbox img {
+    display: block;
+    max-width: 96vw;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+    transform-origin: center center;
+    transition: transform 0.04s linear;
+    cursor: zoom-in;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .lightbox-close {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    border: 1px solid #fff;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.4rem 0.9rem;
+    cursor: pointer;
+  }
+
+  @media (max-width: 760px) {
+    figure {
+      grid-column: span 12;
+    }
+  }
+</style>

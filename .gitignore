@@ -1,0 +1,7 @@
+node_modules
+.dist
+.astro
+studio/node_modules
+studio/dist
+.env
+studio/.env

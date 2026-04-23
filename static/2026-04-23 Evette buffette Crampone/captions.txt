@@ -1,0 +1,14 @@
+Back.jpg|Estado inicial parte izquierda
+Front.jpg|Estado inicial parte derecha.
+Bottom back.jpg|Estado inicial bottom back
+Campana.jpg|Estado inicial campana
+Interior campana con luz.jpg|Deslacado pero sano.
+Fuga C mano derecha.jpg|Estado inicial, pedidas zapatillas.
+C1.jpg|Corcho destrozado
+Corcho C1 cambiado.jpg|Inspeccion de zonas criticas.
+C2.jpg|Corcho removido
+C1 y C2.jpg|Palma corchos nuevos
+Ab key sin corcho.jpg|Ruiditos
+TA.jpg|Cambiando corcho a TA
+C mano derecha muelle.jpg|Cambiando un muelle que no tenía tensión.
+C mano derecha.jpg| Zapatilla nueva

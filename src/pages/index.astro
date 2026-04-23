@@ -1,0 +1,321 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { formatDate } from "@/lib/format";
+import { getStaticPosts } from "@/lib/staticPosts";
+
+const posts = await getStaticPosts();
+const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
+  a.localeCompare(b)
+);
+---
+
+<BaseLayout>
+  <header class="hero container">
+    <p class="pill">Luthieria de saxos</p>
+    <h1>Trabajos de luthieria de Dr.Sax.</h1>
+  </header>
+
+  {allTags.length > 0 && (
+    <section class="container filters">
+      <p class="filters-title">Filtrar por tag:</p>
+      <form id="tag-search-form" class="tag-search" autocomplete="off">
+        <input
+          id="tag-search-input"
+          class="tag-search-input"
+          type="search"
+          name="q"
+          placeholder="Buscar tag (ej: trabajo:ajuste, marca:...)"
+          list="tag-suggestions"
+        />
+        <button class="tag-search-btn" type="submit">Buscar</button>
+      </form>
+      <datalist id="tag-suggestions">
+        {allTags.map((tag) => <option value={tag} />)}
+      </datalist>
+      <div class="tag-list">
+        <button class="tag-btn active" type="button" data-filter-tag="">Todos</button>
+        {allTags.map((tag) => (
+          <button class="tag-btn" type="button" data-filter-tag={tag}>
+            {tag}
+          </button>
+        ))}
+      </div>
+    </section>
+  )}
+
+  <main class="container grid">
+    {
+      posts.map((post) => (
+        <a
+          class="card-link"
+          href={`/saxos/${post.slug}/`}
+          aria-label={`Abrir ${post.title}`}
+          data-post-tags={post.tags.join(",")}
+        >
+          <article class="card">
+            {post.coverImageUrl && <img src={post.coverImageUrl} alt={post.title} loading="lazy" />}
+            <div class="card-body">
+              <p class="pill">{post.workType}</p>
+              <h2>{post.title}</h2>
+              <p>{post.excerpt}</p>
+              {post.tags.length > 0 && (
+                <div class="card-tags">
+                  {post.tags.slice(0, 4).map((tag) => (
+                    <span class="tag-chip">{tag}</span>
+                  ))}
+                </div>
+              )}
+              <div class="meta">
+                {post.model && <span>{post.model}</span>}
+                <span>{formatDate(post.publishedAt)}</span>
+              </div>
+              <span class="open-link">Ver registro</span>
+            </div>
+          </article>
+        </a>
+      ))
+    }
+  </main>
+</BaseLayout>
+
+<script>
+  const buttons = Array.from(document.querySelectorAll("[data-filter-tag]"));
+  const cards = Array.from(document.querySelectorAll("[data-post-tags]"));
+  const form = document.querySelector("#tag-search-form");
+  const input = document.querySelector("#tag-search-input");
+
+  const activate = (tag, query) => {
+    buttons.forEach((button) => {
+      const current = button.getAttribute("data-filter-tag") || "";
+      button.classList.toggle("active", current === tag);
+    });
+
+    cards.forEach((card) => {
+      const raw = card.getAttribute("data-post-tags") || "";
+      const tags = raw ? raw.split(",") : [];
+      const normalizedQuery = (query || "").trim().toLowerCase();
+      const matchesTag = !tag || tags.includes(tag);
+      const matchesQuery =
+        !normalizedQuery || tags.some((item) => item.toLowerCase().includes(normalizedQuery));
+      const visible = matchesTag && matchesQuery;
+      card.style.display = visible ? "" : "none";
+    });
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  const initialTag = params.get("tag") || "";
+  const initialQuery = params.get("q") || "";
+  const knownTags = new Set(buttons.map((button) => button.getAttribute("data-filter-tag") || ""));
+  if (input) {
+    input.value = initialQuery;
+  }
+  activate(knownTags.has(initialTag) ? initialTag : "", initialQuery);
+
+  buttons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tag = button.getAttribute("data-filter-tag") || "";
+      const query = input?.value?.trim() || "";
+      const next = new URLSearchParams();
+      if (tag) next.set("tag", tag);
+      if (query) next.set("q", query);
+      const nextUrl = next.toString() ? `${window.location.pathname}?${next}` : window.location.pathname;
+      window.history.replaceState({}, "", nextUrl);
+      activate(tag, query);
+    });
+  });
+
+  form?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const query = input?.value?.trim() || "";
+    const activeButton = buttons.find((button) => button.classList.contains("active"));
+    const activeTag = activeButton?.getAttribute("data-filter-tag") || "";
+    const next = new URLSearchParams();
+    if (activeTag) next.set("tag", activeTag);
+    if (query) next.set("q", query);
+    const nextUrl = next.toString() ? `${window.location.pathname}?${next}` : window.location.pathname;
+    window.history.replaceState({}, "", nextUrl);
+    activate(activeTag, query);
+  });
+
+  input?.addEventListener("input", () => {
+    const query = input.value.trim();
+    const activeButton = buttons.find((button) => button.classList.contains("active"));
+    const activeTag = activeButton?.getAttribute("data-filter-tag") || "";
+    activate(activeTag, query);
+  });
+</script>
+
+<style>
+  .hero {
+    padding: 4.2rem 0 2.2rem;
+  }
+
+  .hero h1 {
+    font-size: clamp(2rem, 6vw, 4rem);
+    max-width: 18ch;
+    margin: 1rem 0;
+  }
+
+  .intro {
+    max-width: 62ch;
+    color: var(--ink-soft);
+    font-size: 1.02rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 1.2rem;
+    padding-bottom: 4rem;
+  }
+
+  .filters {
+    margin-bottom: 1rem;
+  }
+
+  .filters-title {
+    color: var(--ink-soft);
+    margin: 0 0 0.5rem 0;
+    font-size: 0.95rem;
+  }
+
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .tag-search {
+    display: flex;
+    gap: 0.45rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .tag-search-input {
+    flex: 1;
+    min-width: 220px;
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--card), white 12%);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .tag-search-btn {
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .tag-btn {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--card), white 15%);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 0.32rem 0.72rem;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+
+  .tag-btn.active {
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+    color: #fff;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    overflow: hidden;
+    height: 100%;
+  }
+
+  .card img {
+    width: 100%;
+    aspect-ratio: 16/11;
+    object-fit: cover;
+  }
+
+  .card-body {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .card h2 {
+    font-size: clamp(1.7rem, 3vw, 2.4rem);
+  }
+
+  .card-link {
+    display: block;
+    grid-column: span 6;
+    border-radius: 18px;
+    transition: transform 0.16s ease;
+  }
+
+  .card-link:hover {
+    transform: translateY(-2px);
+  }
+
+  .open-link {
+    display: inline-block;
+    margin-top: auto;
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+
+  .card p {
+    color: var(--ink-soft);
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .tag-chip {
+    font-size: 0.76rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 0.18rem 0.55rem;
+    color: var(--ink-soft);
+    background: color-mix(in srgb, var(--card), white 12%);
+  }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.8rem;
+    font-size: 0.9rem;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 900px) {
+    .card-link {
+      grid-column: span 12;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .hero {
+      padding-top: 2.6rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.7rem, 9vw, 2.4rem);
+      max-width: 100%;
+    }
+
+    .tag-search {
+      flex-direction: column;
+    }
+  }
+</style>
