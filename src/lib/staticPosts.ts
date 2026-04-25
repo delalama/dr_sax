@@ -7,6 +7,17 @@ export type StaticImage = {
   caption: string;
 };
 
+export type StaticGalleryItem =
+  | {
+      type: "heading";
+      level: 1 | 2;
+      text: string;
+    }
+  | {
+      type: "image";
+      image: StaticImage;
+    };
+
 export type StaticPost = {
   id: string;
   slug: string;
@@ -20,6 +31,7 @@ export type StaticPost = {
   tags: string[];
   coverImageUrl?: string;
   images: StaticImage[];
+  gallery: StaticGalleryItem[];
 };
 
 type PostMeta = {
@@ -65,11 +77,33 @@ function parseDateFromFolder(folderName: string) {
 function parseCaptions(raw: string) {
   const map = new Map<string, string>();
   const order: string[] = [];
+  const tokens: Array<
+    | { type: "heading"; level: 1 | 2; text: string }
+    | { type: "image"; fileName: string }
+  > = [];
   const lines = raw.split(/\r?\n/);
 
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    const level2Heading = trimmed.match(/^\*\*(.+)\*\*$/);
+    if (level2Heading?.[1]) {
+      const text = level2Heading[1].trim();
+      if (text) {
+        tokens.push({ type: "heading", level: 2, text });
+      }
+      continue;
+    }
+
+    const level1Heading = trimmed.match(/^\*([^*].*)\*$/);
+    if (level1Heading?.[1]) {
+      const text = level1Heading[1].trim();
+      if (text) {
+        tokens.push({ type: "heading", level: 1, text });
+      }
       continue;
     }
 
@@ -85,10 +119,11 @@ function parseCaptions(raw: string) {
         order.push(key);
       }
       map.set(key, value);
+      tokens.push({ type: "image", fileName: key });
     }
   }
 
-  return { map, order };
+  return { map, order, tokens };
 }
 
 function filenameToBriefDescription(fileName: string) {
@@ -155,7 +190,14 @@ async function loadDescription(folderPath: string) {
 async function loadCaptionMap(folderPath: string) {
   const raw = await readIfExists(path.join(folderPath, "captions.txt"));
   if (!raw) {
-    return { map: new Map<string, string>(), order: [] as string[] };
+    return {
+      map: new Map<string, string>(),
+      order: [] as string[],
+      tokens: [] as Array<
+        | { type: "heading"; level: 1 | 2; text: string }
+        | { type: "image"; fileName: string }
+      >
+    };
   }
 
   return parseCaptions(raw);
@@ -186,6 +228,31 @@ async function readPostFromFolder(folderName: string): Promise<StaticPost | null
     url: withBase(`${folderName}/${fileName}`),
     caption: captions.map.get(fileName) ?? filenameToBriefDescription(fileName)
   }));
+  const imagesByName = new Map(images.map((image) => [image.fileName, image] as const));
+  const usedImageNames = new Set<string>();
+  const gallery: StaticGalleryItem[] = [];
+
+  for (const token of captions.tokens) {
+    if (token.type === "heading") {
+      gallery.push(token);
+      continue;
+    }
+
+    const image = imagesByName.get(token.fileName);
+    if (!image || usedImageNames.has(image.fileName)) {
+      continue;
+    }
+
+    gallery.push({ type: "image", image });
+    usedImageNames.add(image.fileName);
+  }
+
+  for (const image of images) {
+    if (usedImageNames.has(image.fileName)) {
+      continue;
+    }
+    gallery.push({ type: "image", image });
+  }
 
   const title = meta.title ?? titleFromFolder(folderName);
   const excerpt =
@@ -204,7 +271,8 @@ async function readPostFromFolder(folderName: string): Promise<StaticPost | null
     model: meta.model,
     tags: normalizeTags(meta.tags),
     coverImageUrl: images[0]?.url,
-    images
+    images,
+    gallery
   };
 }
 

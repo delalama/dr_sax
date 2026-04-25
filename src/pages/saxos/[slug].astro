@@ -20,10 +20,57 @@ if (!post) {
 
 const base = import.meta.env.BASE_URL;
 const pageTitle = `${post.title} | Dr. Sax`;
-const paragraphs = post.description
+type DescriptionBlock = {
+  type: "heading" | "paragraph";
+  text: string;
+};
+
+const descriptionBlocks: DescriptionBlock[] = post.description
   .split(/\r?\n\r?\n/)
-  .map((line) => line.trim())
-  .filter(Boolean);
+  .map((block) => block.trim())
+  .filter(Boolean)
+  .map((block) => {
+    const oneLine = block.replace(/\r?\n+/g, " ").trim();
+    const markdownHeading = oneLine.match(/^#{1,6}\s+(.+)$/);
+    if (markdownHeading?.[1]) {
+      return { type: "heading", text: markdownHeading[1].trim() };
+    }
+
+    if (/^cap(?:i|\u00ED)tulo\b/i.test(oneLine)) {
+      return { type: "heading", text: oneLine };
+    }
+
+    return { type: "paragraph", text: oneLine };
+  });
+
+const normalizeText = (value: string) =>
+  value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const firstParagraph = descriptionBlocks.find((block) => block.type === "paragraph")?.text ?? "";
+const showSummary =
+  Boolean(post.excerpt.trim()) &&
+  (!firstParagraph || normalizeText(post.excerpt) !== normalizeText(firstParagraph));
+
+type GalleryRenderItem =
+  | { type: "heading"; level: 1 | 2; text: string }
+  | { type: "image"; image: (typeof post.images)[number]; index: number };
+
+const galleryRenderItems: GalleryRenderItem[] = [];
+let imageCounter = 0;
+for (const item of post.gallery) {
+  if (item.type === "heading") {
+    galleryRenderItems.push(item);
+    continue;
+  }
+
+  imageCounter += 1;
+  galleryRenderItems.push({ type: "image", image: item.image, index: imageCounter });
+}
 ---
 
 <BaseLayout title={pageTitle} description={post.excerpt}>
@@ -32,7 +79,7 @@ const paragraphs = post.description
     <header>
       <p class="pill">{post.workType}</p>
       <h1>{post.title}</h1>
-      <p class="summary">{post.excerpt}</p>
+      {showSummary && <p class="summary">{post.excerpt}</p>}
       <div class="meta">
         {post.model && <span><strong>Modelo:</strong> {post.model}</span>}
         <span><strong>Publicado:</strong> {formatDate(post.publishedAt)}</span>
@@ -49,27 +96,41 @@ const paragraphs = post.description
       )}
     </header>
 
-    {paragraphs.length > 0 && <section class="desc">{paragraphs.map((p) => <p>{p}</p>)}</section>}
+    {descriptionBlocks.length > 0 && (
+      <section class="desc">
+        {descriptionBlocks.map((block) =>
+          block.type === "heading" ? <h2 class="desc-title">{block.text}</h2> : <p>{block.text}</p>
+        )}
+      </section>
+    )}
 
     <section class="gallery">
-      {post.images.map((image, index) => (
-        <figure>
-          <div class="img-title">{image.fileName}</div>
-          <button
-            class="image-open"
-            type="button"
-            data-full-src={image.url}
-            data-full-alt={image.caption}
-            aria-label={`Ver imagen ${index + 1} en pantalla completa`}
-          >
-            <img src={image.url} alt={image.caption} loading="lazy" />
-          </button>
-          <figcaption>
-            <span class="cap-index">{String(index + 1).padStart(2, "0")}</span>
-            <span>{image.caption}</span>
-          </figcaption>
-        </figure>
-      ))}
+      {galleryRenderItems.map((item) =>
+        item.type === "heading" ? (
+          item.level === 1 ? (
+            <h2 class="gallery-heading level-1">{item.text}</h2>
+          ) : (
+            <h3 class="gallery-heading level-2">{item.text}</h3>
+          )
+        ) : (
+          <figure>
+            <div class="img-title">{item.image.fileName}</div>
+            <button
+              class="image-open"
+              type="button"
+              data-full-src={item.image.url}
+              data-full-alt={item.image.caption}
+              aria-label={`Ver imagen ${item.index} en pantalla completa`}
+            >
+              <img src={item.image.url} alt={item.image.caption} loading="lazy" />
+            </button>
+            <figcaption>
+              <span class="cap-index">{String(item.index).padStart(2, "0")}</span>
+              <span>{item.image.caption}</span>
+            </figcaption>
+          </figure>
+        )
+      )}
     </section>
   </article>
 
@@ -269,6 +330,13 @@ const paragraphs = post.description
     color: var(--ink-soft);
   }
 
+  .desc-title {
+    margin: 1.2rem 0 0.45rem;
+    color: var(--ink);
+    font-size: 1.05rem;
+    letter-spacing: 0.02em;
+  }
+
   .post-tags {
     display: flex;
     flex-wrap: wrap;
@@ -290,6 +358,27 @@ const paragraphs = post.description
     grid-template-columns: repeat(12, 1fr);
     gap: 0.8rem;
     margin-top: 1.2rem;
+  }
+
+  .gallery-heading {
+    grid-column: 1 / -1;
+    margin: 1.4rem 0 0.25rem;
+    color: var(--ink);
+    letter-spacing: 0.01em;
+    line-height: 1.2;
+  }
+
+  .gallery-heading.level-1 {
+    font-size: clamp(1.35rem, 2.3vw, 1.9rem);
+    font-weight: 800;
+    margin-top: 1.8rem;
+  }
+
+  .gallery-heading.level-2 {
+    font-size: clamp(1.02rem, 1.6vw, 1.25rem);
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin-top: 0.95rem;
   }
 
   figure {
