@@ -13,13 +13,13 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
 
 <BaseLayout>
   <header class="hero container">
-    <p class="pill">Luthieria de saxos</p>
-    <h1>Trabajos de luthieria de Dr.Sax.</h1>
+    <p class="pill" data-i18n="homeBadge">Luthieria de saxos</p>
+    <h1 data-i18n="homeTitle">Trabajos de luthieria de Dr.Sax.</h1>
   </header>
 
   {allTags.length > 0 && (
     <section class="container filters">
-      <p class="filters-title">Filtrar por tag:</p>
+      <p class="filters-title" data-i18n="filterByTag">Filtrar por tag:</p>
       <form id="tag-search-form" class="tag-search" autocomplete="off">
         <input
           id="tag-search-input"
@@ -27,15 +27,16 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
           type="search"
           name="q"
           placeholder="Buscar tag (ej: trabajo:ajuste, marca:...)"
+          data-i18n-placeholder="searchTagsPlaceholder"
           list="tag-suggestions"
         />
-        <button class="tag-search-btn" type="submit">Buscar</button>
+        <button class="tag-search-btn" type="submit" data-i18n="searchButton">Buscar</button>
       </form>
       <datalist id="tag-suggestions">
         {allTags.map((tag) => <option value={tag} />)}
       </datalist>
       <div class="tag-list">
-        <button class="tag-btn active" type="button" data-filter-tag="">Todos</button>
+        <button class="tag-btn active" type="button" data-filter-tag="" data-i18n="allTags">Todos</button>
         {allTags.map((tag) => (
           <button class="tag-btn" type="button" data-filter-tag={tag}>
             {tag}
@@ -69,9 +70,9 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
               )}
               <div class="meta">
                 {post.model && <span>{post.model}</span>}
-                <span>{formatDate(post.publishedAt)}</span>
+                <span data-i18n-date={post.publishedAt}>{formatDate(post.publishedAt)}</span>
               </div>
-              <span class="open-link">Ver registro</span>
+              <span class="open-link" data-i18n="openRecord">Ver registro</span>
             </div>
           </article>
         </a>

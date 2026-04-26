@@ -24,7 +24,177 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
     />
   </head>
   <body>
+    <nav class="lang-switch" aria-label="Language selector">
+      <button type="button" data-lang-choice="es">Castellano</button>
+      <button type="button" data-lang-choice="en">English</button>
+      <button type="button" data-lang-choice="ca">Mallorquín</button>
+    </nav>
     <slot />
+
+    <script is:inline>
+      (() => {
+        const LANG_PARAM = "lang";
+        const STORAGE_KEY = "drsax.lang";
+        const DEFAULT_LANG = "es";
+        const SUPPORTED_LANGS = new Set(["es", "en", "ca"]);
+        const HTML_LANG = { es: "es", en: "en", ca: "ca" };
+        const DATE_LOCALES = { es: "es-ES", en: "en-GB", ca: "ca-ES" };
+        const TEXTS = {
+          es: {
+            homeBadge: "Luthieria de saxos",
+            homeTitle: "Trabajos de luthieria de Dr.Sax.",
+            filterByTag: "Filtrar por tag:",
+            searchTagsPlaceholder: "Buscar tag (ej: trabajo:ajuste, marca:...)",
+            searchButton: "Buscar",
+            allTags: "Todos",
+            openRecord: "Ver registro",
+            backToWorks: "Volver a trabajos",
+            modelLabel: "Modelo:",
+            publishedLabel: "Publicado:",
+            folderLabel: "Carpeta:",
+            close: "Cerrar"
+          },
+          en: {
+            homeBadge: "Saxophone luthiery",
+            homeTitle: "Dr. Sax luthiery work log.",
+            filterByTag: "Filter by tag:",
+            searchTagsPlaceholder: "Search tag (e.g. work:setup, brand:...)",
+            searchButton: "Search",
+            allTags: "All",
+            openRecord: "View record",
+            backToWorks: "Back to works",
+            modelLabel: "Model:",
+            publishedLabel: "Published:",
+            folderLabel: "Folder:",
+            close: "Close"
+          },
+          ca: {
+            homeBadge: "Luteria de saxos",
+            homeTitle: "Feines de luteria de Dr.Sax.",
+            filterByTag: "Filtra per etiqueta:",
+            searchTagsPlaceholder: "Cerca etiqueta (ex: feina:ajust, marca:...)",
+            searchButton: "Cercar",
+            allTags: "Tots",
+            openRecord: "Veure registre",
+            backToWorks: "Tornar a feines",
+            modelLabel: "Model:",
+            publishedLabel: "Publicat:",
+            folderLabel: "Carpeta:",
+            close: "Tancar"
+          }
+        };
+
+        const getLangFromUrl = () => {
+          const params = new URLSearchParams(window.location.search);
+          const requested = params.get(LANG_PARAM);
+          return requested && SUPPORTED_LANGS.has(requested) ? requested : "";
+        };
+
+        const getCurrentLang = () => {
+          const urlLang = getLangFromUrl();
+          if (urlLang) return urlLang;
+          const storedLang = localStorage.getItem(STORAGE_KEY);
+          return storedLang && SUPPORTED_LANGS.has(storedLang) ? storedLang : DEFAULT_LANG;
+        };
+
+        const setActiveButton = (lang) => {
+          document.querySelectorAll("[data-lang-choice]").forEach((button) => {
+            const active = button.getAttribute("data-lang-choice") === lang;
+            button.classList.toggle("active", active);
+            button.setAttribute("aria-pressed", active ? "true" : "false");
+          });
+        };
+
+        const applyTextTranslations = (lang) => {
+          const dict = TEXTS[lang] || TEXTS[DEFAULT_LANG];
+          document.querySelectorAll("[data-i18n]").forEach((el) => {
+            const key = el.getAttribute("data-i18n");
+            if (!key || !(key in dict)) return;
+            el.textContent = dict[key];
+          });
+
+          document.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+            const key = el.getAttribute("data-i18n-placeholder");
+            if (!key || !(key in dict)) return;
+            el.setAttribute("placeholder", dict[key]);
+          });
+        };
+
+        const applyDateTranslations = (lang) => {
+          const locale = DATE_LOCALES[lang] || DATE_LOCALES[DEFAULT_LANG];
+          document.querySelectorAll("[data-i18n-date]").forEach((el) => {
+            const raw = el.getAttribute("data-i18n-date");
+            if (!raw) return;
+            const date = new Date(raw);
+            if (Number.isNaN(date.getTime())) return;
+            el.textContent = new Intl.DateTimeFormat(locale, {
+              day: "2-digit",
+              month: "long",
+              year: "numeric"
+            }).format(date);
+          });
+        };
+
+        const applyLangToInternalLinks = (lang) => {
+          document.querySelectorAll("a[href]").forEach((link) => {
+            const href = link.getAttribute("href");
+            if (!href || href.startsWith("#") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+              return;
+            }
+
+            let url;
+            try {
+              url = new URL(href, window.location.origin);
+            } catch {
+              return;
+            }
+
+            if (url.origin !== window.location.origin) return;
+            if (lang === DEFAULT_LANG) {
+              url.searchParams.delete(LANG_PARAM);
+            } else {
+              url.searchParams.set(LANG_PARAM, lang);
+            }
+            const next =
+              url.pathname + (url.search ? url.search : "") + (url.hash ? url.hash : "");
+            link.setAttribute("href", next);
+          });
+        };
+
+        const applyLanguage = (lang) => {
+          document.documentElement.lang = HTML_LANG[lang] || HTML_LANG[DEFAULT_LANG];
+          localStorage.setItem(STORAGE_KEY, lang);
+          setActiveButton(lang);
+          applyTextTranslations(lang);
+          applyDateTranslations(lang);
+          applyLangToInternalLinks(lang);
+        };
+
+        const currentLang = getCurrentLang();
+        applyLanguage(currentLang);
+
+        const currentUrl = new URL(window.location.href);
+        if (currentLang !== DEFAULT_LANG && currentUrl.searchParams.get(LANG_PARAM) !== currentLang) {
+          currentUrl.searchParams.set(LANG_PARAM, currentLang);
+          window.history.replaceState({}, "", currentUrl.toString());
+        }
+
+        document.querySelectorAll("[data-lang-choice]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const lang = button.getAttribute("data-lang-choice") || DEFAULT_LANG;
+            if (!SUPPORTED_LANGS.has(lang)) return;
+            const url = new URL(window.location.href);
+            if (lang === DEFAULT_LANG) {
+              url.searchParams.delete(LANG_PARAM);
+            } else {
+              url.searchParams.set(LANG_PARAM, lang);
+            }
+            localStorage.setItem(STORAGE_KEY, lang);
+            window.location.href = url.toString();
+          });
+        });
+      })();
+    </script>
   </body>
 </html>
 
@@ -116,7 +286,51 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
     font-family: "Special Elite", monospace;
   }
 
+  .lang-switch {
+    position: fixed;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 20;
+    display: flex;
+    gap: 0.35rem;
+    padding: 0.35rem;
+    border: 1px solid color-mix(in srgb, var(--line), #6d4a2f 38%);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--card), #f5e6cf 18%);
+    box-shadow: 0 7px 16px rgba(62, 34, 17, 0.2);
+  }
+
+  .lang-switch button {
+    border: 1px solid var(--line);
+    background: color-mix(in srgb, var(--card), #f9f0e3 8%);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    padding: 0.24rem 0.62rem;
+    cursor: pointer;
+    font-size: 0.74rem;
+    letter-spacing: 0.02em;
+    font-family: "Special Elite", monospace;
+  }
+
+  .lang-switch button.active {
+    color: #fff3e2;
+    background: var(--accent-dark);
+    border-color: var(--accent-dark);
+  }
+
   @media (max-width: 640px) {
+    .lang-switch {
+      right: 0.45rem;
+      top: 0.45rem;
+      gap: 0.25rem;
+      padding: 0.27rem;
+    }
+
+    .lang-switch button {
+      font-size: 0.68rem;
+      padding: 0.2rem 0.5rem;
+    }
+
     h1 {
       font-size: 2.25rem;
     }

@@ -78,15 +78,24 @@ for (const item of post.gallery) {
 
 <BaseLayout title={pageTitle} description={post.excerpt}>
   <article class="container project">
-    <a href={base} class="back">Volver a trabajos</a>
+    <a href={base} class="back" data-i18n="backToWorks">Volver a trabajos</a>
     <header>
       <p class="pill">{post.workType}</p>
       <h1>{post.title}</h1>
       {showSummary && <p class="summary">{post.excerpt}</p>}
       <div class="meta">
-        {post.model && <span><strong>Modelo:</strong> {post.model}</span>}
-        <span><strong>Publicado:</strong> {formatDate(post.publishedAt)}</span>
-        <span><strong>Carpeta:</strong> {post.folderName}</span>
+        {post.model && (
+          <span>
+            <strong data-i18n="modelLabel">Modelo:</strong> {post.model}
+          </span>
+        )}
+        <span>
+          <strong data-i18n="publishedLabel">Publicado:</strong>{" "}
+          <span data-i18n-date={post.publishedAt}>{formatDate(post.publishedAt)}</span>
+        </span>
+        <span>
+          <strong data-i18n="folderLabel">Carpeta:</strong> {post.folderName}
+        </span>
       </div>
       {post.tags.length > 0 && (
         <div class="post-tags">
@@ -138,7 +147,13 @@ for (const item of post.gallery) {
   </article>
 
   <dialog id="lightbox" class="lightbox">
-    <button id="lightbox-close" class="lightbox-close" type="button" aria-label="Cerrar imagen">
+    <button
+      id="lightbox-close"
+      class="lightbox-close"
+      type="button"
+      aria-label="Cerrar imagen"
+      data-i18n="close"
+    >
       Cerrar
     </button>
     <img id="lightbox-image" src="" alt="" />
