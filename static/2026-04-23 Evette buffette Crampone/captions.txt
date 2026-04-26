@@ -18,6 +18,11 @@ C1 y C2.jpg|Palma corchos nuevos
 Ab key sin corcho.jpg|Ruiditos
 **TA**
 TA.jpg|Cambiando corcho a TA
+**Octave key**
+dirty octave key.jpg| Llave y pasador sucio
+clean octave key.jpg| Llave y pasador limpio
+octave key cork.jpg| Lijada menor de 1mm
+
 
 *Tudel reemplazo corcho*
 **El corcho estaba destrozado**
@@ -31,7 +36,6 @@ kork union.jpg|Unión del corcho
 kork upper part.jpg| Parte arriba corcho nuevo
 boquilla puesta.jpg| Resultado con boquilla puesta
 
-
 *Muelles*
 C mano derecha muelle.jpg|Cambiando un muelle que no tenía tensión.
-C mano derecha.jpg| Zapatilla nueva
+C mano derecha.jpg| Desmontada tecla, cambiando zapatilla para eliminar fuga de foto 06
