@@ -23,6 +23,10 @@ dirty octave key.jpg| Llave y pasador sucio
 clean octave key.jpg| Llave y pasador limpio
 octave key cork.jpg| Lijada menor de 1mm
 
+corcho para remover.jpg| Eliminamos corcho
+corcho nuevo C5.jpg| corcho nuevo, inventada para evitar click metalico
+corcho nuevo short.jpg| corcho nuevo
+corcho nuevo.jpg| corcho nuevo
 
 *Tudel reemplazo corcho*
 **El corcho estaba destrozado**

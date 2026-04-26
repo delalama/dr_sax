@@ -49,9 +49,14 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
     font-family: "Archivo", sans-serif;
     color: var(--ink);
     background:
+      linear-gradient(180deg, color-mix(in srgb, var(--bg), white 26%) 0%, color-mix(in srgb, var(--bg), white 8%) 58%, var(--bg) 100%),
       radial-gradient(circle at 10% 0%, #f8e9d0 0, transparent 30%),
       radial-gradient(circle at 95% 10%, #f2d6bf 0, transparent 35%),
+      url("/general/escritorio.jpg"),
       var(--bg);
+    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
+    background-size: auto, auto, auto, clamp(460px, 56vw, 760px) auto, auto;
+    background-position: top, 10% 0%, 95% 10%, center 1.5rem, center;
     line-height: 1.55;
   }
 
