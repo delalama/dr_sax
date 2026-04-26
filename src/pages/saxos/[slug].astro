@@ -52,9 +52,12 @@ const normalizeText = (value: string) =>
     .trim();
 
 const firstParagraph = descriptionBlocks.find((block) => block.type === "paragraph")?.text ?? "";
+const normalizedExcerpt = normalizeText(post.excerpt);
+const normalizedDescription = normalizeText(post.description);
 const showSummary =
-  Boolean(post.excerpt.trim()) &&
-  (!firstParagraph || normalizeText(post.excerpt) !== normalizeText(firstParagraph));
+  Boolean(normalizedExcerpt) &&
+  (!normalizedDescription || !normalizedDescription.includes(normalizedExcerpt)) &&
+  (!firstParagraph || normalizedExcerpt !== normalizeText(firstParagraph));
 
 type GalleryRenderItem =
   | { type: "heading"; level: 1 | 2; text: string }

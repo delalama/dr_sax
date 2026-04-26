@@ -44,6 +44,7 @@ type PostMeta = {
 };
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+const IGNORED_FOLDERS = new Set(["general"]);
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
 
 function withBase(relativePath: string) {
@@ -280,7 +281,10 @@ export async function getStaticPosts(): Promise<StaticPost[]> {
   const staticPath = path.join(process.cwd(), "static");
   const entries = await readdir(staticPath, { withFileTypes: true });
 
-  const folders = entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  const folders = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((folderName) => !IGNORED_FOLDERS.has(folderName.toLowerCase()));
   const posts = (
     await Promise.all(folders.map((folderName) => readPostFromFolder(folderName)))
   ).filter(Boolean) as StaticPost[];

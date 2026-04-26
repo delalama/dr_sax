@@ -19,7 +19,7 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700&family=Cormorant+Garamond:wght@500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;500;700&family=IM+Fell+English+SC&family=Special+Elite&display=swap"
       rel="stylesheet"
     />
   </head>
@@ -30,13 +30,13 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
 
 <style is:global>
   :root {
-    --bg: #f4efe8;
-    --ink: #111111;
-    --ink-soft: #3e3a35;
-    --accent: #9a4d22;
-    --accent-dark: #5f2f16;
-    --card: #fffdf8;
-    --line: #d7c4af;
+    --bg: #e2d3bd;
+    --ink: #24180f;
+    --ink-soft: #534235;
+    --accent: #934d29;
+    --accent-dark: #64331a;
+    --card: #f6ebdb;
+    --line: #b99873;
   }
 
   * {
@@ -46,25 +46,49 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
   body {
     margin: 0;
     min-height: 100vh;
-    font-family: "Archivo", sans-serif;
+    font-family: "Alegreya", serif;
     color: var(--ink);
     background:
-      linear-gradient(180deg, color-mix(in srgb, var(--bg), white 26%) 0%, color-mix(in srgb, var(--bg), white 8%) 58%, var(--bg) 100%),
-      radial-gradient(circle at 10% 0%, #f8e9d0 0, transparent 30%),
-      radial-gradient(circle at 95% 10%, #f2d6bf 0, transparent 35%),
+      linear-gradient(to bottom, rgba(242, 231, 214, 0.84), rgba(226, 211, 189, 0.9)),
       url("/general/escritorio.jpg"),
       var(--bg);
-    background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat;
-    background-size: auto, auto, auto, clamp(460px, 56vw, 760px) auto, auto;
-    background-position: top, 10% 0%, 95% 10%, center 1.5rem, center;
+    background-repeat: no-repeat, no-repeat, repeat;
+    background-size: cover, cover, auto;
+    background-position: center, center top, center;
+    background-attachment: fixed, fixed, scroll;
+    position: relative;
     line-height: 1.55;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 20% 18%, rgba(255, 246, 229, 0.35), transparent 55%),
+      linear-gradient(to bottom, rgba(58, 37, 20, 0.08), rgba(58, 37, 20, 0.22)),
+      repeating-linear-gradient(
+        0deg,
+        rgba(91, 65, 43, 0.04) 0,
+        rgba(91, 65, 43, 0.04) 1px,
+        transparent 1px,
+        transparent 4px
+      );
+    mix-blend-mode: multiply;
+    z-index: 0;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
   }
 
   h1,
   h2,
   h3 {
-    font-family: "Cormorant Garamond", serif;
-    letter-spacing: 0.01em;
+    font-family: "IM Fell English SC", serif;
+    letter-spacing: 0.03em;
     line-height: 1.1;
     margin: 0;
   }
@@ -87,8 +111,9 @@ const { title = SITE.title, description = SITE.description } = Astro.props as Pr
     font-size: 0.8rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--ink-soft);
-    background: color-mix(in srgb, var(--card), white 20%);
+    color: color-mix(in srgb, var(--ink-soft), #3b2a1d 35%);
+    background: color-mix(in srgb, var(--card), white 10%);
+    font-family: "Special Elite", monospace;
   }
 
   @media (max-width: 640px) {

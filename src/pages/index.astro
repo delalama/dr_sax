@@ -149,13 +149,14 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
 
 <style>
   .hero {
-    padding: 4.2rem 0 2.2rem;
+    padding: 4.4rem 0 2.4rem;
   }
 
   .hero h1 {
     font-size: clamp(2rem, 6vw, 4rem);
     max-width: 18ch;
     margin: 1rem 0;
+    text-shadow: 0 2px 0 rgba(255, 248, 233, 0.72);
   }
 
   .intro {
@@ -173,6 +174,11 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
 
   .filters {
     margin-bottom: 1rem;
+    padding: 0.95rem 1rem;
+    border: 1px dashed color-mix(in srgb, var(--line), #8b5e3c 30%);
+    border-radius: 10px 16px 12px 18px;
+    background: color-mix(in srgb, var(--card), #f8f3e8 22%);
+    box-shadow: 0 8px 20px rgba(66, 39, 19, 0.12);
   }
 
   .filters-title {
@@ -197,7 +203,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
     flex: 1;
     min-width: 220px;
     border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--card), white 12%);
+    background: color-mix(in srgb, var(--card), white 6%);
     color: var(--ink);
     border-radius: 999px;
     padding: 0.5rem 0.9rem;
@@ -206,7 +212,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
 
   .tag-search-btn {
     border: 1px solid var(--line);
-    background: var(--card);
+    background: color-mix(in srgb, var(--card), #f1ddc4 12%);
     color: var(--ink-soft);
     border-radius: 999px;
     padding: 0.5rem 0.9rem;
@@ -216,7 +222,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
 
   .tag-btn {
     border: 1px solid var(--line);
-    background: color-mix(in srgb, var(--card), white 15%);
+    background: color-mix(in srgb, var(--card), #f5e8d7 12%);
     color: var(--ink-soft);
     border-radius: 999px;
     padding: 0.32rem 0.72rem;
@@ -227,15 +233,19 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
   .tag-btn.active {
     background: var(--accent-dark);
     border-color: var(--accent-dark);
-    color: #fff;
+    color: #fff1de;
   }
 
   .card {
-    background: var(--card);
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--card), white 10%), var(--card));
     border: 1px solid var(--line);
-    border-radius: 18px;
+    border-radius: 12px 20px 14px 22px;
     overflow: hidden;
     height: 100%;
+    box-shadow:
+      0 16px 26px rgba(63, 35, 18, 0.18),
+      0 2px 0 rgba(255, 251, 244, 0.75) inset;
   }
 
   .card img {
@@ -245,7 +255,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
   }
 
   .card-body {
-    padding: 1rem;
+    padding: 1.05rem;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
@@ -258,12 +268,13 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
   .card-link {
     display: block;
     grid-column: span 6;
-    border-radius: 18px;
-    transition: transform 0.16s ease;
+    border-radius: 12px 20px 14px 22px;
+    transition: transform 0.2s ease, filter 0.2s ease;
   }
 
   .card-link:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px) rotate(-0.25deg);
+    filter: saturate(1.04);
   }
 
   .open-link {
@@ -271,6 +282,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
     margin-top: auto;
     color: var(--accent-dark);
     font-weight: 700;
+    font-family: "Special Elite", monospace;
   }
 
   .card p {
@@ -289,7 +301,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
     border-radius: 999px;
     padding: 0.18rem 0.55rem;
     color: var(--ink-soft);
-    background: color-mix(in srgb, var(--card), white 12%);
+    background: color-mix(in srgb, var(--card), #f8f0e1 10%);
   }
 
   .meta {
@@ -298,6 +310,7 @@ const allTags = [...new Set(posts.flatMap((post) => post.tags))].sort((a, b) =>
     gap: 0.8rem;
     font-size: 0.9rem;
     color: var(--ink-soft);
+    font-family: "Special Elite", monospace;
   }
 
   @media (max-width: 900px) {
