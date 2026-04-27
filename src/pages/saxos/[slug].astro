@@ -313,7 +313,11 @@ for (const item of post.gallery) {
     dialogImage.setAttribute("src", src);
     dialogImage.setAttribute("alt", alt);
     applyZoom(1);
-    imageDialog.showModal();
+    if (typeof imageDialog.showModal === "function") {
+      imageDialog.showModal();
+    } else {
+      imageDialog.setAttribute("open", "open");
+    }
   };
 
   const showVideoInDialog = (src) => {
@@ -322,11 +326,24 @@ for (const item of post.gallery) {
     dialogVideo.setAttribute("src", src);
     dialogVideo.currentTime = 0;
     dialogVideo.load();
-    videoDialog.showModal();
+    if (typeof videoDialog.showModal === "function") {
+      videoDialog.showModal();
+    } else {
+      videoDialog.setAttribute("open", "open");
+    }
     const playAttempt = dialogVideo.play();
     if (playAttempt && typeof playAttempt.catch === "function") {
       playAttempt.catch(() => {});
     }
+  };
+
+  const closeDialogSafely = (dialogEl) => {
+    if (!dialogEl) return;
+    if (typeof dialogEl.close === "function") {
+      dialogEl.close();
+      return;
+    }
+    dialogEl.removeAttribute("open");
   };
 
   if (
@@ -354,8 +371,8 @@ for (const item of post.gallery) {
       });
     });
 
-    imageCloseButton.addEventListener("click", () => imageDialog.close());
-    videoCloseButton.addEventListener("click", () => videoDialog.close());
+    imageCloseButton.addEventListener("click", () => closeDialogSafely(imageDialog));
+    videoCloseButton.addEventListener("click", () => closeDialogSafely(videoDialog));
     dialogImage.addEventListener(
       "wheel",
       (event) => {
@@ -448,26 +465,14 @@ for (const item of post.gallery) {
     });
 
     imageDialog.addEventListener("click", (event) => {
-      const rect = imageDialog.getBoundingClientRect();
-      const inDialog =
-        rect.top <= event.clientY &&
-        event.clientY <= rect.top + rect.height &&
-        rect.left <= event.clientX &&
-        event.clientX <= rect.left + rect.width;
-      if (!inDialog) {
-        imageDialog.close();
+      if (event.target === imageDialog) {
+        closeDialogSafely(imageDialog);
       }
     });
 
     videoDialog.addEventListener("click", (event) => {
-      const rect = videoDialog.getBoundingClientRect();
-      const inDialog =
-        rect.top <= event.clientY &&
-        event.clientY <= rect.top + rect.height &&
-        rect.left <= event.clientX &&
-        event.clientX <= rect.left + rect.width;
-      if (!inDialog) {
-        videoDialog.close();
+      if (event.target === videoDialog) {
+        closeDialogSafely(videoDialog);
       }
     });
   }
@@ -684,6 +689,15 @@ for (const item of post.gallery) {
     padding: 0;
     background: transparent;
     max-width: min(96vw, 1400px);
+  }
+
+  .lightbox[open] {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: fit-content;
+    height: fit-content;
+    z-index: 9999;
   }
 
   .lightbox::backdrop {
