@@ -42,3 +42,7 @@ boquilla puesta.jpg| Resultado con boquilla puesta
 *Muelles*
 C mano derecha muelle.jpg|Cambiando un muelle que no tenía tensión.
 C mano derecha.jpg| Desmontada tecla, cambiando zapatilla para eliminar fuga de foto 06
+
+
+*Zapatillas*
+zapatilla Eb mano derecha.mp4| La única zapatilla con fugas era Eb mano derecha 

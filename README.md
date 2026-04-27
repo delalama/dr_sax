@@ -15,17 +15,18 @@ Web: `http://localhost:4321`
 ## Como publicar un post
 
 1. Crea una carpeta nueva dentro de `static/`, por ejemplo: `static/2026-04-24/`
-2. Mete las fotos (`.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`).
+2. Mete los medios (`.jpg`, `.jpeg`, `.png`, `.webp`, `.avif`, `.mp4`).
 3. Opcional: agrega `post.txt` (o `post.md`) con la descripcion general.
-4. Opcional: agrega `captions.txt` para pie de foto por imagen.
+   Opcional tambien: `post.en.txt` / `post.ca.txt` (o `.md`) para traduccion manual fiable sin depender de APIs externas.
+4. Opcional: agrega `captions.txt` para pie de foto por archivo multimedia.
 5. Opcional: agrega `meta.json` para titulo/fecha/modelo/tags.
 
 Sin hacer nada mas, al recargar la web aparece publicado.
-Si una imagen no tiene linea en `captions.txt`, se usa automaticamente su nombre de archivo como descripcion breve.
+Si un archivo multimedia no tiene linea en `captions.txt`, se usa automaticamente su nombre de archivo como descripcion breve.
 
 ## Formato de `captions.txt`
 
-Una linea por imagen:
+Una linea por archivo multimedia:
 
 ```txt
 IMG_20260423_094551.jpg|Vista general antes del ajuste.

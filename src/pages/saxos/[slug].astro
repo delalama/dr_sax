@@ -25,7 +25,8 @@ type DescriptionBlock = {
   text: string;
 };
 
-const descriptionBlocks: DescriptionBlock[] = post.description
+const toDescriptionBlocks = (rawText: string): DescriptionBlock[] =>
+  rawText
   .split(/\r?\n\r?\n/)
   .map((block) => block.trim())
   .filter(Boolean)
@@ -42,6 +43,27 @@ const descriptionBlocks: DescriptionBlock[] = post.description
 
     return { type: "paragraph", text: oneLine };
   });
+
+const descriptionBlocks: DescriptionBlock[] = toDescriptionBlocks(post.description);
+const descriptionBlocksByLang: Partial<Record<"en" | "ca", DescriptionBlock[]>> = {};
+if (post.descriptionTranslations.en) {
+  descriptionBlocksByLang.en = toDescriptionBlocks(post.descriptionTranslations.en);
+}
+if (post.descriptionTranslations.ca) {
+  descriptionBlocksByLang.ca = toDescriptionBlocks(post.descriptionTranslations.ca);
+}
+
+const getBlockTranslation = (lang: "en" | "ca", index: number, type: DescriptionBlock["type"]) => {
+  const translatedBlocks = descriptionBlocksByLang[lang];
+  if (!translatedBlocks || translatedBlocks.length <= index) {
+    return undefined;
+  }
+  const translated = translatedBlocks[index];
+  if (translated.type !== type) {
+    return undefined;
+  }
+  return translated.text;
+};
 
 const normalizeText = (value: string) =>
   value
@@ -82,7 +104,16 @@ for (const item of post.gallery) {
     <header>
       <p class="pill">{post.workType}</p>
       <h1>{post.title}</h1>
-      {showSummary && <p class="summary">{post.excerpt}</p>}
+      {showSummary && (
+        <p
+          class="summary"
+          data-i18n-dynamic={post.excerpt}
+          data-i18n-dynamic-en={post.excerptTranslations.en}
+          data-i18n-dynamic-ca={post.excerptTranslations.ca}
+        >
+          {post.excerpt}
+        </p>
+      )}
       <div class="meta">
         {post.model && (
           <span>
@@ -110,8 +141,25 @@ for (const item of post.gallery) {
 
     {descriptionBlocks.length > 0 && (
       <section class="desc">
-        {descriptionBlocks.map((block) =>
-          block.type === "heading" ? <h2 class="desc-title">{block.text}</h2> : <p>{block.text}</p>
+        {descriptionBlocks.map((block, index) =>
+          block.type === "heading" ? (
+            <h2
+              class="desc-title"
+              data-i18n-dynamic={block.text}
+              data-i18n-dynamic-en={getBlockTranslation("en", index, "heading")}
+              data-i18n-dynamic-ca={getBlockTranslation("ca", index, "heading")}
+            >
+              {block.text}
+            </h2>
+          ) : (
+            <p
+              data-i18n-dynamic={block.text}
+              data-i18n-dynamic-en={getBlockTranslation("en", index, "paragraph")}
+              data-i18n-dynamic-ca={getBlockTranslation("ca", index, "paragraph")}
+            >
+              {block.text}
+            </p>
+          )
         )}
       </section>
     )}
@@ -120,25 +168,42 @@ for (const item of post.gallery) {
       {galleryRenderItems.map((item) =>
         item.type === "heading" ? (
           item.level === 1 ? (
-            <h2 class="gallery-heading level-1">{item.text}</h2>
+            <h2 class="gallery-heading level-1" data-i18n-dynamic={item.text}>
+              {item.text}
+            </h2>
           ) : (
-            <h3 class="gallery-heading level-2">{item.text}</h3>
+            <h3 class="gallery-heading level-2" data-i18n-dynamic={item.text}>
+              {item.text}
+            </h3>
           )
         ) : (
           <figure>
             <div class="img-title">{item.image.fileName}</div>
             <button
-              class="image-open"
+              class="media-open"
               type="button"
               data-full-src={item.image.url}
+              data-full-type={item.image.kind}
               data-full-alt={item.image.caption}
-              aria-label={`Ver imagen ${item.index} en pantalla completa`}
+              aria-label={`Ver ${item.image.kind === "video" ? "video" : "imagen"} ${item.index} en pantalla completa`}
             >
-              <img src={item.image.url} alt={item.image.caption} loading="lazy" />
+              <div class="media-frame">
+                {item.image.kind === "video" ? (
+                  <video class="media-el" src={item.image.url} preload="metadata" muted playsinline />
+                ) : (
+                  <img class="media-el" src={item.image.url} alt={item.image.caption} loading="lazy" />
+                )}
+              </div>
+              {item.image.kind === "video" && (
+                <span class="video-indicator" aria-hidden="true">
+                  <span class="video-indicator-icon"></span>
+                  <span class="video-indicator-label">Play</span>
+                </span>
+              )}
             </button>
             <figcaption>
               <span class="cap-index">{String(item.index).padStart(2, "0")}</span>
-              <span>{item.image.caption}</span>
+              <span data-i18n-dynamic={item.image.caption}>{item.image.caption}</span>
             </figcaption>
           </figure>
         )
@@ -146,9 +211,9 @@ for (const item of post.gallery) {
     </section>
   </article>
 
-  <dialog id="lightbox" class="lightbox">
+  <dialog id="lightbox-image-dialog" class="lightbox">
     <button
-      id="lightbox-close"
+      id="lightbox-image-close"
       class="lightbox-close"
       type="button"
       aria-label="Cerrar imagen"
@@ -158,13 +223,33 @@ for (const item of post.gallery) {
     </button>
     <img id="lightbox-image" src="" alt="" />
   </dialog>
+
+  <dialog id="lightbox-video-dialog" class="lightbox">
+    <button
+      id="lightbox-video-close"
+      class="lightbox-close"
+      type="button"
+      aria-label="Cerrar video"
+      data-i18n="close"
+    >
+      Cerrar
+    </button>
+    <video id="lightbox-video-player" controls playsinline preload="metadata" webkit-playsinline></video>
+    <p id="lightbox-video-error" class="lightbox-video-error" hidden>
+      No se puede mostrar la imagen del video en este navegador. Prueba otro codec (H.264).
+    </p>
+  </dialog>
 </BaseLayout>
 
 <script>
-  const dialog = document.querySelector("#lightbox");
+  const imageDialog = document.querySelector("#lightbox-image-dialog");
+  const videoDialog = document.querySelector("#lightbox-video-dialog");
   const dialogImage = document.querySelector("#lightbox-image");
-  const closeButton = document.querySelector("#lightbox-close");
-  const openButtons = document.querySelectorAll(".image-open");
+  const dialogVideo = document.querySelector("#lightbox-video-player");
+  const dialogVideoError = document.querySelector("#lightbox-video-error");
+  const imageCloseButton = document.querySelector("#lightbox-image-close");
+  const videoCloseButton = document.querySelector("#lightbox-video-close");
+  const openButtons = document.querySelectorAll(".media-open");
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 8;
   const ZOOM_STEP = 0.14;
@@ -223,20 +308,54 @@ for (const item of post.gallery) {
     refreshCursor();
   };
 
-  if (dialog && dialogImage && closeButton && openButtons.length > 0) {
+  const showImageInDialog = (src, alt) => {
+    if (!imageDialog || !dialogImage) return;
+    dialogImage.setAttribute("src", src);
+    dialogImage.setAttribute("alt", alt);
+    applyZoom(1);
+    imageDialog.showModal();
+  };
+
+  const showVideoInDialog = (src) => {
+    if (!videoDialog || !dialogVideo || !dialogVideoError) return;
+    dialogVideoError.hidden = true;
+    dialogVideo.setAttribute("src", src);
+    dialogVideo.currentTime = 0;
+    dialogVideo.load();
+    videoDialog.showModal();
+    const playAttempt = dialogVideo.play();
+    if (playAttempt && typeof playAttempt.catch === "function") {
+      playAttempt.catch(() => {});
+    }
+  };
+
+  if (
+    imageDialog &&
+    videoDialog &&
+    dialogImage &&
+    dialogVideo &&
+    dialogVideoError &&
+    imageCloseButton &&
+    videoCloseButton &&
+    openButtons.length > 0
+  ) {
     openButtons.forEach((button) => {
       button.addEventListener("click", () => {
         const src = button.getAttribute("data-full-src");
+        const mediaType = button.getAttribute("data-full-type") ?? "image";
         const alt = button.getAttribute("data-full-alt") ?? "Imagen ampliada";
         if (!src) return;
-        dialogImage.setAttribute("src", src);
-        dialogImage.setAttribute("alt", alt);
-        applyZoom(1);
-        dialog.showModal();
+
+        if (mediaType === "video") {
+          showVideoInDialog(src);
+        } else {
+          showImageInDialog(src, alt);
+        }
       });
     });
 
-    closeButton.addEventListener("click", () => dialog.close());
+    imageCloseButton.addEventListener("click", () => imageDialog.close());
+    videoCloseButton.addEventListener("click", () => videoDialog.close());
     dialogImage.addEventListener(
       "wheel",
       (event) => {
@@ -292,22 +411,63 @@ for (const item of post.gallery) {
     dialogImage.addEventListener("pointerup", endDrag);
     dialogImage.addEventListener("pointercancel", endDrag);
 
-    dialog.addEventListener("close", () => {
+    dialogVideo.addEventListener("click", () => {
+      if (dialogVideo.paused) {
+        const playAttempt = dialogVideo.play();
+        if (playAttempt && typeof playAttempt.catch === "function") {
+          playAttempt.catch(() => {});
+        }
+        return;
+      }
+      dialogVideo.pause();
+    });
+
+    dialogVideo.addEventListener("error", () => {
+      dialogVideoError.hidden = false;
+    });
+
+    dialogVideo.addEventListener("loadedmetadata", () => {
+      const hasVisualTrack = dialogVideo.videoWidth > 0 && dialogVideo.videoHeight > 0;
+      dialogVideoError.hidden = hasVisualTrack;
+    });
+
+    imageDialog.addEventListener("close", () => {
       applyZoom(1);
       movedDuringDrag = false;
       isDragging = false;
       refreshCursor();
+      dialogImage.removeAttribute("src");
+      dialogImage.setAttribute("alt", "");
     });
 
-    dialog.addEventListener("click", (event) => {
-      const rect = dialog.getBoundingClientRect();
+    videoDialog.addEventListener("close", () => {
+      dialogVideo.pause();
+      dialogVideo.removeAttribute("src");
+      dialogVideo.load();
+      dialogVideoError.hidden = true;
+    });
+
+    imageDialog.addEventListener("click", (event) => {
+      const rect = imageDialog.getBoundingClientRect();
       const inDialog =
         rect.top <= event.clientY &&
         event.clientY <= rect.top + rect.height &&
         rect.left <= event.clientX &&
         event.clientX <= rect.left + rect.width;
       if (!inDialog) {
-        dialog.close();
+        imageDialog.close();
+      }
+    });
+
+    videoDialog.addEventListener("click", (event) => {
+      const rect = videoDialog.getBoundingClientRect();
+      const inDialog =
+        rect.top <= event.clientY &&
+        event.clientY <= rect.top + rect.height &&
+        rect.left <= event.clientX &&
+        event.clientX <= rect.left + rect.width;
+      if (!inDialog) {
+        videoDialog.close();
       }
     });
   }
@@ -421,18 +581,85 @@ for (const item of post.gallery) {
     text-overflow: ellipsis;
   }
 
-  figure img {
-    width: 100%;
+  .media-open {
     display: block;
-  }
-
-  .image-open {
-    display: block;
+    position: relative;
     width: 100%;
     border: 0;
     padding: 0;
-    cursor: zoom-in;
     background: transparent;
+  }
+
+  .media-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 11;
+    overflow: hidden;
+    background: #0d0d0d;
+  }
+
+  .media-el {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+  }
+
+  .media-frame video.media-el {
+    pointer-events: none;
+  }
+
+  .media-open[data-full-type="image"] {
+    cursor: zoom-in;
+  }
+
+  .media-open[data-full-type="video"] {
+    cursor: pointer;
+  }
+
+  .video-indicator {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    background: radial-gradient(circle, rgba(0, 0, 0, 0.34), rgba(0, 0, 0, 0.18) 45%, transparent 70%);
+    color: #fff;
+    font-size: 0.92rem;
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 700;
+    pointer-events: none;
+  }
+
+  .video-indicator-icon {
+    display: block;
+    width: 88px;
+    height: 88px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.92);
+    background: rgba(0, 0, 0, 0.52);
+    position: relative;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  }
+
+  .video-indicator-icon::after {
+    content: "";
+    position: absolute;
+    left: 36px;
+    top: 27px;
+    width: 0;
+    height: 0;
+    border-top: 16px solid transparent;
+    border-bottom: 16px solid transparent;
+    border-left: 25px solid #fff;
+  }
+
+  .video-indicator-label {
+    text-shadow: 0 2px 9px rgba(0, 0, 0, 0.7);
   }
 
   figcaption {
@@ -463,7 +690,8 @@ for (const item of post.gallery) {
     background: rgba(0, 0, 0, 0.85);
   }
 
-  .lightbox img {
+  .lightbox img,
+  .lightbox video {
     display: block;
     max-width: 96vw;
     max-height: 90vh;
@@ -471,9 +699,31 @@ for (const item of post.gallery) {
     border-radius: 8px;
     transform-origin: center center;
     transition: transform 0.04s linear;
-    cursor: zoom-in;
     user-select: none;
     touch-action: none;
+  }
+
+  .lightbox img {
+    cursor: zoom-in;
+  }
+
+  .lightbox video {
+    width: min(96vw, 1400px);
+    height: auto;
+    background: #000;
+    border-radius: 8px;
+  }
+
+  .lightbox-video-error {
+    color: #fff3d8;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    border-radius: 10px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.88rem;
+    margin: 0.65rem auto 0;
+    max-width: min(92vw, 780px);
+    text-align: center;
   }
 
   .lightbox-close {

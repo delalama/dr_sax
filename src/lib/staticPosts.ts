@@ -2,6 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 export type StaticImage = {
+  kind: "image" | "video";
   fileName: string;
   url: string;
   caption: string;
@@ -24,7 +25,9 @@ export type StaticPost = {
   folderName: string;
   title: string;
   excerpt: string;
+  excerptTranslations: Partial<Record<"en" | "ca", string>>;
   description: string;
+  descriptionTranslations: Partial<Record<"en" | "ca", string>>;
   publishedAt: string;
   workType: string;
   model?: string;
@@ -44,6 +47,8 @@ type PostMeta = {
 };
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif"]);
+const VIDEO_EXTENSIONS = new Set([".mp4"]);
+const MEDIA_EXTENSIONS = new Set([...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS]);
 const IGNORED_FOLDERS = new Set(["general"]);
 const BASE_URL = import.meta.env.BASE_URL ?? "/";
 
@@ -131,6 +136,10 @@ function filenameToBriefDescription(fileName: string) {
   const baseName = path.parse(fileName).name;
   const cleaned = baseName.replace(/[_-]+/g, " ").trim();
   const compact = cleaned.replace(/\s+/g, " ");
+  const extension = path.extname(fileName).toLowerCase();
+  if (VIDEO_EXTENSIONS.has(extension)) {
+    return `Video: ${compact}.`;
+  }
   return `Imagen: ${compact}.`;
 }
 
@@ -188,6 +197,20 @@ async function loadDescription(folderPath: string) {
   return "";
 }
 
+async function loadDescriptionTranslation(folderPath: string, lang: "en" | "ca") {
+  const md = await readIfExists(path.join(folderPath, `post.${lang}.md`));
+  if (md) {
+    return md.trim();
+  }
+
+  const txt = await readIfExists(path.join(folderPath, `post.${lang}.txt`));
+  if (txt) {
+    return txt.trim();
+  }
+
+  return "";
+}
+
 async function loadCaptionMap(folderPath: string) {
   const raw = await readIfExists(path.join(folderPath, "captions.txt"));
   if (!raw) {
@@ -207,24 +230,29 @@ async function loadCaptionMap(folderPath: string) {
 async function readPostFromFolder(folderName: string): Promise<StaticPost | null> {
   const folderPath = path.join(process.cwd(), "static", folderName);
   const entries = await readdir(folderPath, { withFileTypes: true });
-  const imageFiles = entries
-    .filter((entry) => entry.isFile() && IMAGE_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
+  const mediaFiles = entries
+    .filter((entry) => entry.isFile() && MEDIA_EXTENSIONS.has(path.extname(entry.name).toLowerCase()))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
-  if (imageFiles.length === 0) {
+  if (mediaFiles.length === 0) {
     return null;
   }
 
   const meta = await loadMeta(folderPath);
   const description = await loadDescription(folderPath);
+  const [descriptionEn, descriptionCa] = await Promise.all([
+    loadDescriptionTranslation(folderPath, "en"),
+    loadDescriptionTranslation(folderPath, "ca")
+  ]);
   const captions = await loadCaptionMap(folderPath);
 
-  const orderedFromCaptions = captions.order.filter((fileName) => imageFiles.includes(fileName));
-  const remainingFiles = imageFiles.filter((fileName) => !orderedFromCaptions.includes(fileName));
-  const orderedImageFiles = [...orderedFromCaptions, ...remainingFiles];
+  const orderedFromCaptions = captions.order.filter((fileName) => mediaFiles.includes(fileName));
+  const remainingFiles = mediaFiles.filter((fileName) => !orderedFromCaptions.includes(fileName));
+  const orderedMediaFiles = [...orderedFromCaptions, ...remainingFiles];
 
-  const images = orderedImageFiles.map((fileName) => ({
+  const images = orderedMediaFiles.map((fileName) => ({
+    kind: VIDEO_EXTENSIONS.has(path.extname(fileName).toLowerCase()) ? "video" : "image",
     fileName,
     url: withBase(`${folderName}/${fileName}`),
     caption: captions.map.get(fileName) ?? filenameToBriefDescription(fileName)
@@ -259,6 +287,21 @@ async function readPostFromFolder(folderName: string): Promise<StaticPost | null
   const excerpt =
     meta.excerpt ??
     (description ? description.slice(0, 180) : `Registro con ${images.length} imagenes del taller.`);
+  const excerptTranslations: Partial<Record<"en" | "ca", string>> = {};
+  if (descriptionEn) {
+    excerptTranslations.en = descriptionEn.slice(0, 180);
+  }
+  if (descriptionCa) {
+    excerptTranslations.ca = descriptionCa.slice(0, 180);
+  }
+
+  const descriptionTranslations: Partial<Record<"en" | "ca", string>> = {};
+  if (descriptionEn) {
+    descriptionTranslations.en = descriptionEn;
+  }
+  if (descriptionCa) {
+    descriptionTranslations.ca = descriptionCa;
+  }
 
   return {
     id: folderName,
@@ -266,12 +309,14 @@ async function readPostFromFolder(folderName: string): Promise<StaticPost | null
     folderName,
     title,
     excerpt,
+    excerptTranslations,
     description,
+    descriptionTranslations,
     publishedAt: meta.date ?? parseDateFromFolder(folderName),
     workType: meta.workType ?? "Trabajo de taller",
     model: meta.model,
     tags: normalizeTags(meta.tags),
-    coverImageUrl: images[0]?.url,
+    coverImageUrl: images.find((item) => item.kind === "image")?.url,
     images,
     gallery
   };
